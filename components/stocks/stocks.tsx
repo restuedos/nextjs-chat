@@ -16,11 +16,11 @@ export function Stocks({ props: stocks }: { props: Stock[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-col gap-2 overflow-y-scroll pb-4 text-sm sm:flex-row">
+      <div className="mb-4 w-full flex flex-col gap-2 overflow-y-scroll pb-4 text-sm">
         {stocks.map(stock => (
           <button
             key={stock.symbol}
-            className="flex cursor-pointer flex-row gap-2 rounded-lg bg-zinc-800 p-2 text-left hover:bg-zinc-700 sm:w-52"
+            className="flex cursor-pointer flex-row gap-2 rounded-lg bg-zinc-800 p-2 text-left hover:bg-zinc-700"
             onClick={async () => {
               const response = await submitUserMessage(`View ${stock.symbol}`)
               setMessages(currentMessages => [...currentMessages, response])
@@ -36,7 +36,7 @@ export function Stocks({ props: stocks }: { props: Stock[] }) {
             <div className="flex flex-col">
               <div className="bold uppercase text-zinc-300">{stock.symbol}</div>
               <div className="text-base text-zinc-500">
-                ${stock.price.toExponential(1)}
+                ${stock.price.toFixed(2)}
               </div>
             </div>
             <div className="ml-auto flex flex-col">
@@ -45,14 +45,14 @@ export function Stocks({ props: stocks }: { props: Stock[] }) {
                   stock.delta > 0 ? 'text-green-600' : 'text-red-600'
                 } bold text-right uppercase`}
               >
-                {` ${((stock.delta / stock.price) * 100).toExponential(1)}%`}
+                {` ${(stock.delta).toFixed(2)}%`}
               </div>
               <div
                 className={`${
                   stock.delta > 0 ? 'text-green-700' : 'text-red-700'
                 } text-right text-base`}
               >
-                {stock.delta.toExponential(1)}
+                {(stock.delta * stock.price).toFixed(2)}
               </div>
             </div>
           </button>

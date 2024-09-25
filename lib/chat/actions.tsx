@@ -29,7 +29,8 @@ import {
   formatNumber,
   runAsyncFnWithoutBlocking,
   sleep,
-  nanoid
+  nanoid,
+  fetcher
 } from '@/lib/utils'
 import { saveChat } from '@/app/actions'
 import { SpinnerMessage, UserMessage } from '@/components/stocks/message'
@@ -201,6 +202,21 @@ async function submitUserMessage(content: string) {
 
           await sleep(1000)
 
+          let result = await fetcher(`${process.env.CRYPTOMARKETCAP_API_URL}/cryptocurrency/listings/latest?limit=10`, {
+            headers: {
+              'X-CMC_PRO_API_KEY': `${process.env.CRYPTOMARKETCAP_API_KEY}`,
+            },
+          })
+          result = result?.data
+
+          stocks = result.map((item) => {
+            return {
+              symbol: item?.symbol,
+              price: item?.quote?.USD?.price,
+              delta: item?.quote?.USD?.percent_change_1h
+            }
+          })
+
           const toolCallId = nanoid()
 
           aiState.done({
@@ -250,10 +266,8 @@ async function submitUserMessage(content: string) {
             .describe(
               'The name or symbol of the stock or currency. e.g. DOGE/AAPL/USD.'
             ),
-          price: z.number().describe('The price of the stock.'),
-          delta: z.number().describe('The change in price of the stock')
         }),
-        generate: async function* ({ symbol, price, delta }) {
+        generate: async function* ({ symbol }) {
           yield (
             <BotCard>
               <StockSkeleton />
@@ -261,6 +275,20 @@ async function submitUserMessage(content: string) {
           )
 
           await sleep(1000)
+
+          let result = await fetcher(`${process.env.CRYPTOMARKETCAP_API_URL}/cryptocurrency/quotes/latest?symbol=${symbol}`, {
+            headers: {
+              'X-CMC_PRO_API_KEY': `${process.env.CRYPTOMARKETCAP_API_KEY}`,
+            },
+          })
+          result = result?.data?.[symbol]
+
+          const stock = {
+            symbol: result?.symbol,
+            price: result?.quote?.USD?.price,
+            delta: result?.quote?.USD?.percent_change_1h,
+            lastUpdate: Date.now()
+          }
 
           const toolCallId = nanoid()
 
@@ -276,7 +304,7 @@ async function submitUserMessage(content: string) {
                     type: 'tool-call',
                     toolName: 'showStockPrice',
                     toolCallId,
-                    args: { symbol, price, delta }
+                    args: stock
                   }
                 ]
               },
@@ -288,7 +316,7 @@ async function submitUserMessage(content: string) {
                     type: 'tool-result',
                     toolName: 'showStockPrice',
                     toolCallId,
-                    result: { symbol, price, delta }
+                    result: stock
                   }
                 ]
               }
@@ -297,7 +325,7 @@ async function submitUserMessage(content: string) {
 
           return (
             <BotCard>
-              <Stock props={{ symbol, price, delta }} />
+              <Stock props={stock} />
             </BotCard>
           )
         }
