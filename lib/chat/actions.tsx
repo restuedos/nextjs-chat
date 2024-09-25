@@ -36,6 +36,10 @@ import { saveChat } from '@/app/actions'
 import { SpinnerMessage, UserMessage } from '@/components/stocks/message'
 import { Chat, Message } from '@/lib/types'
 import { auth } from '@/auth'
+import { Resend } from 'resend';
+import { EmailTemplate } from '@/components/email-template'
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
   'use server'
@@ -144,6 +148,7 @@ async function submitUserMessage(content: string) {
 
     If the user requests purchasing a stock, call \`show_stock_purchase_ui\` to show the purchase UI.
     If the user just wants the price, call \`show_stock_price\` to show the price.
+    If the user just wants the price to be sent via email, call \`send_stock_price\` to send the price via email.
     If you want to show trending stocks, call \`list_stocks\`.
     If you want to show events, call \`get_events\`.
     If the user wants to sell stock, or complete another impossible task, respond that you are a demo and cannot do that.
@@ -328,6 +333,84 @@ async function submitUserMessage(content: string) {
               <Stock props={stock} />
             </BotCard>
           )
+        }
+      },
+      sendStockPrice: {
+        description:
+          'Get the current stock price of a given stock or currency, then send the price via email. Use this to send the price via email to the user.',
+        parameters: z.object({
+          email: z.string().describe('The email of the user'),
+          symbol: z
+            .string()
+            .describe(
+              'The name or symbol of the stock or currency. e.g. DOGE/AAPL/USD.'
+            )
+        }),
+        generate: async function* ({ email, symbol }) {
+          yield (
+            <BotCard>
+              <StockSkeleton />
+            </BotCard>
+          )
+
+          await sleep(1000)
+
+          let result = await fetcher(`${process.env.CRYPTOMARKETCAP_API_URL}/cryptocurrency/quotes/latest?symbol=${symbol}`, {
+            headers: {
+              'X-CMC_PRO_API_KEY': `${process.env.CRYPTOMARKETCAP_API_KEY}`,
+            },
+          })
+          result = result?.data?.[symbol]
+
+          const stock = {
+            name: result?.name,
+            symbol: result?.symbol,
+            price: result?.quote?.USD?.price,
+            delta: result?.quote?.USD?.percent_change_1h,
+            lastUpdate: Date.now()
+          }
+
+          await resend.emails.send({
+            from: `${process.env.RESEND_EMAIL}`,
+            to: email,
+            subject: `Price of ${stock.name} - Stock Trading Bot`,
+            react: EmailTemplate(stock),
+          });
+
+          const toolCallId = nanoid()
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: 'assistant',
+                content: [
+                  {
+                    type: 'tool-call',
+                    toolName: 'sendStockPrice',
+                    toolCallId,
+                    args: stock
+                  }
+                ]
+              },
+              {
+                id: nanoid(),
+                role: 'tool',
+                content: [
+                  {
+                    type: 'tool-result',
+                    toolName: 'sendStockPrice',
+                    toolCallId,
+                    result: stock
+                  }
+                ]
+              }
+            ]
+          })
+
+          return <BotMessage content={`Price of ${stock.name} has been sent via email to ${email}`} />
         }
       },
       showStockPurchase: {
@@ -594,6 +677,11 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                 <Stocks props={tool.result} />
               </BotCard>
             ) : tool.toolName === 'showStockPrice' ? (
+              <BotCard>
+                {/* @ts-expect-error */}
+                <Stock props={tool.result} />
+              </BotCard>
+            ) : tool.toolName === 'sendStockPrice' ? (
               <BotCard>
                 {/* @ts-expect-error */}
                 <Stock props={tool.result} />
