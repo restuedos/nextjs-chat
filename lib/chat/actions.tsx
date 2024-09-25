@@ -94,9 +94,8 @@ async function confirmPurchase(symbol: string, price: number, amount: number) {
         {
           id: nanoid(),
           role: 'system',
-          content: `[User has purchased ${amount} shares of ${symbol} at ${price}. Total cost = ${
-            amount * price
-          }]`
+          content: `[User has purchased ${amount} shares of ${symbol} at ${price}. Total cost = ${amount * price
+            }]`
         }
       ]
     })
@@ -214,7 +213,7 @@ async function submitUserMessage(content: string) {
           })
           result = result?.data
 
-          stocks = result.map((item) => {
+          stocks = result.map((item: any) => {
             return {
               symbol: item?.symbol,
               price: item?.quote?.USD?.price,
@@ -288,7 +287,7 @@ async function submitUserMessage(content: string) {
           })
           result = result?.data?.[symbol]
 
-          const stock = {
+          const stock: any = {
             symbol: result?.symbol,
             price: result?.quote?.USD?.price,
             delta: result?.quote?.USD?.percent_change_1h,
