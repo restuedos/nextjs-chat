@@ -196,9 +196,10 @@ async function submitUserMessage(content: string) {
               price: z.number().describe('The price of the stock'),
               delta: z.number().describe('The change in price of the stock')
             })
-          )
+          ),
+          limit: z.number().describe('The top rank limit of the stocks')
         }),
-        generate: async function* ({ stocks }) {
+        generate: async function* ({ stocks, limit = null }) {
           yield (
             <BotCard>
               <StocksSkeleton />
@@ -207,7 +208,7 @@ async function submitUserMessage(content: string) {
 
           await sleep(1000)
 
-          let result = await fetcher(`${process.env.CRYPTOMARKETCAP_API_URL}/cryptocurrency/listings/latest?limit=10`, {
+          let result = await fetcher(`${process.env.CRYPTOMARKETCAP_API_URL}/cryptocurrency/listings/latest?limit=${limit}`, {
             headers: {
               'X-CMC_PRO_API_KEY': `${process.env.CRYPTOMARKETCAP_API_KEY}`,
             },
