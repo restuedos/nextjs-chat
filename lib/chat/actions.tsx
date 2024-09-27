@@ -192,6 +192,7 @@ async function submitUserMessage(content: string) {
           stocks: z.array(
             z.object({
               symbol: z.string().describe('The symbol of the stock'),
+              name: z.string().describe('The name of the stock'),
               price: z.number().describe('The price of the stock'),
               delta: z.number().describe('The change in price of the stock')
             })
@@ -216,6 +217,7 @@ async function submitUserMessage(content: string) {
           stocks = result.map((item: any) => {
             return {
               symbol: item?.symbol,
+              name: item?.name,
               price: item?.quote?.USD?.price,
               delta: item?.quote?.USD?.percent_change_1h
             }
@@ -289,6 +291,7 @@ async function submitUserMessage(content: string) {
 
           const stock: any = {
             symbol: result?.symbol,
+            name: result?.name,
             price: result?.quote?.USD?.price,
             delta: result?.quote?.USD?.percent_change_1h,
             lastUpdate: Date.now()
@@ -362,8 +365,8 @@ async function submitUserMessage(content: string) {
           result = result?.data?.[symbol]
 
           const stock = {
-            name: result?.name,
             symbol: result?.symbol,
+            name: result?.name,
             price: result?.quote?.USD?.price,
             delta: result?.quote?.USD?.percent_change_1h,
             lastUpdate: Date.now()

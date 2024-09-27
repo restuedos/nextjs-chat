@@ -6,6 +6,7 @@ import { useAIState } from 'ai/rsc'
 
 interface Stock {
   symbol: string
+  name: string
   price: number
   delta: number
   lastUpdate: string
@@ -48,7 +49,7 @@ function useResizeObserver<T extends HTMLElement = HTMLElement>(
   return size
 }
 
-export function Stock({ props: { symbol, price, delta, lastUpdate } }: { props: Stock }) {
+export function Stock({ props: { symbol, name, price, delta, lastUpdate } }: { props: Stock }) {
   const [aiState, setAIState] = useAIState()
   const id = useId()
 
@@ -107,13 +108,13 @@ export function Stock({ props: { symbol, price, delta, lastUpdate } }: { props: 
       hour: 'numeric',
       minute: 'numeric',
       hour12: true,
-      timeZone: 'Asia/Jakarta',
+      timeZone: 'UTC',
     };
 
     // Formatting the date
     const formattedDate = new Date(date).toLocaleString('en-US', options);
 
-    return formattedDate;
+    return formattedDate + ' (UTC)';
   };
 
   return (
@@ -123,7 +124,7 @@ export function Stock({ props: { symbol, price, delta, lastUpdate } }: { props: 
           {`${delta > 0 ? '+' : ''}${(delta).toFixed(2)}% ${delta > 0 ? '↑' : '↓'
             }`}
         </div>
-        <div className="text-lg text-zinc-300">{symbol}</div>
+        <div className="text-lg text-zinc-300">{symbol} ({name})</div>
         <div className="text-3xl font-bold">${price.toFixed(2)}</div>
         <div className="text mt-1 text-xs text-zinc-500">
           Closed: {formatClosedDate(lastUpdate)}

@@ -6,6 +6,7 @@ import type { AI } from '@/lib/chat/actions'
 
 interface Stock {
   symbol: string
+  name: string
   price: number
   delta: number
 }
@@ -34,7 +35,7 @@ export function Stocks({ props: stocks }: { props: Stock[] }) {
               {stock.delta > 0 ? '↑' : '↓'}
             </div>
             <div className="flex flex-col">
-              <div className="bold uppercase text-zinc-300">{stock.symbol}</div>
+              <div className="bold uppercase text-zinc-300">{stock.symbol} ({stock.name})</div>
               <div className="text-base text-zinc-500">
                 ${stock.price.toFixed(2)}
               </div>
