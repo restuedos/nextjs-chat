@@ -38,8 +38,15 @@ import { Chat, Message } from '@/lib/types'
 import { auth } from '@/auth'
 import { Resend } from 'resend';
 import { EmailTemplate } from '@/components/email-template'
+import { DateTime } from 'luxon';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const formatDateTime = (date: Date, timeZone: string) => {
+    return DateTime.fromJSDate(date)
+        .setZone(timeZone)
+        .toFormat('EEE, MMM dd yyyy, HH:mm:ss ZZZZ (z)');
+};
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
   'use server'
@@ -150,6 +157,7 @@ async function submitUserMessage(content: string) {
     If the user just wants the price to be sent via email, call \`send_stock_price\` to send the price via email.
     If you want to show trending stocks, call \`list_stocks\`.
     If you want to show events, call \`get_events\`.
+    If the user wants to show today date, call \`get_today_date\`.
     If the user wants to sell stock, or complete another impossible task, respond that you are a demo and cannot do that.
 
     Besides that, you can also chat with users and do some calculations if needed.`,
@@ -414,6 +422,60 @@ async function submitUserMessage(content: string) {
           })
 
           return <BotMessage content={`Price of ${stock.name} has been sent via email to ${email}`} />
+        }
+      },
+      getTodayDate: {
+        description:
+          'Get the today date. Use this to show the today date to the user.',
+        parameters: z.object({
+          todayDate: z.string().describe('The today date'),
+          timezone: z.string().describe('The timezone of the requested today date'),
+        }),
+        generate: async function* ({ todayDate, timezone }) {
+          yield (
+            <BotCard>
+              <StockSkeleton />
+            </BotCard>
+          )
+
+          await sleep(1000)
+
+          todayDate = formatDateTime(new Date(), timezone);
+
+          const toolCallId = nanoid()
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: 'assistant',
+                content: [
+                  {
+                    type: 'tool-call',
+                    toolName: 'getTodayDate',
+                    toolCallId,
+                    args: todayDate
+                  }
+                ]
+              },
+              {
+                id: nanoid(),
+                role: 'tool',
+                content: [
+                  {
+                    type: 'tool-result',
+                    toolName: 'getTodayDate',
+                    toolCallId,
+                    result: todayDate
+                  }
+                ]
+              }
+            ]
+          })
+
+          return <BotMessage content={`Today is ${todayDate}. How can I assist you today?`} />
         }
       },
       showStockPurchase: {
