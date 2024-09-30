@@ -39,6 +39,7 @@ import { auth } from '@/auth'
 import { Resend } from 'resend';
 import { EmailTemplate } from '@/components/email-template'
 import { DateTime } from 'luxon';
+import { generateText } from 'ai'
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -141,9 +142,8 @@ async function submitUserMessage(content: string) {
     apiKey: process.env.OPENROUTER_API_KEY,
   })
 
-  const result = await streamUI({
+  const config = {
     model: openrouter('gpt-3.5-turbo'),
-    initial: <SpinnerMessage />,
     system: `\
     You are a stock trading conversation bot and you can help users buy stocks, step by step.
     You and the user can discuss stock prices and the user can adjust the amount of stocks they want to buy, or place an order, in the UI.
@@ -160,7 +160,13 @@ async function submitUserMessage(content: string) {
     If the user wants to show today date, call \`get_today_date\`.
     If the user wants to sell stock, or complete another impossible task, respond that you are a demo and cannot do that.
 
-    Besides that, you can also chat with users and do some calculations if needed.`,
+    Besides that, you can also chat with users and do some calculations if needed.`
+  }
+
+  const result = await streamUI({
+    model: config.model,
+    initial: <SpinnerMessage />,
+    system: config.system,
     messages: [
       ...aiState.get().messages.map((message: any) => ({
         role: message.role,
@@ -222,6 +228,23 @@ async function submitUserMessage(content: string) {
             },
           })
           result = result?.data
+          if (result == null) {
+            const {text} = await generateText({
+              model: config.model,
+              system: config.system,
+              messages: [
+                ...aiState.get().messages.map((message: any) => ({
+                  role: message.role,
+                  content: message.content,
+                  name: message.name
+                }))
+              ]
+            });
+            
+            return (
+              <BotMessage content={text} />
+            )
+          }
 
           stocks = result.map((item: any) => {
             return {
@@ -297,7 +320,24 @@ async function submitUserMessage(content: string) {
             },
           })
           result = result?.data?.[symbol]
-
+          if (result == null) {
+            const {text} = await generateText({
+              model: config.model,
+              system: config.system,
+              messages: [
+                ...aiState.get().messages.map((message: any) => ({
+                  role: message.role,
+                  content: message.content,
+                  name: message.name
+                }))
+              ]
+            });
+            
+            return (
+              <BotMessage content={text} />
+            )
+          }
+          
           const stock: any = {
             symbol: result?.symbol,
             name: result?.name,
@@ -372,6 +412,17 @@ async function submitUserMessage(content: string) {
             },
           })
           result = result?.data?.[symbol]
+          if (result == null) {
+            const {text} = await generateText({
+              model: config.model,
+              system: config.system,
+              prompt: `[Cannot send stock price because it does not exist']`
+            });
+            
+            return (
+              <BotMessage content={text} />
+            )
+          }
 
           const stock = {
             symbol: result?.symbol,
