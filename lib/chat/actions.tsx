@@ -492,6 +492,10 @@ async function submitUserMessage(content: string) {
           await sleep(1000)
 
           todayDate = formatDateTime(new Date(), timezone);
+          const {text} = await generateText({
+            model: config.model,
+            prompt: `[Show today date = '${todayDate}']`
+          })
 
           const toolCallId = nanoid()
 
@@ -507,7 +511,7 @@ async function submitUserMessage(content: string) {
                     type: 'tool-call',
                     toolName: 'getTodayDate',
                     toolCallId,
-                    args: todayDate
+                    args: text
                   }
                 ]
               },
@@ -519,14 +523,14 @@ async function submitUserMessage(content: string) {
                     type: 'tool-result',
                     toolName: 'getTodayDate',
                     toolCallId,
-                    result: todayDate
+                    result: text
                   }
                 ]
               }
             ]
           })
 
-          return <BotMessage content={`Today is ${todayDate}. How can I assist you today?`} />
+          return <BotMessage content={text} />
         }
       },
       showStockPurchase: {
